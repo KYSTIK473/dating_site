@@ -6,6 +6,11 @@ p{
     margin: 0;
 }
 
+.container{
+    display: block;
+  padding: 10px;
+}
+
 .block{
     border: 1px solid black;
     padding: 10px;
