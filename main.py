@@ -18,6 +18,7 @@ from wtforms import (
     StringField,
     TextAreaField,
     SubmitField,
+    IntegerField,
     BooleanField,
     EmailField,
 )
@@ -40,6 +41,48 @@ app.config["SECRET_KEY"] = "yandexlyceum_secret_key"
 @app.route("/")
 def index():
     return render_template("main.html")
+
+
+class RegisterForm(FlaskForm):
+    email = StringField("Почта", validators=[DataRequired()])
+    password = PasswordField("Пароль", validators=[DataRequired()])
+    password_again = PasswordField("Повторите пароль", validators=[DataRequired()])
+    name = StringField("Имя", validators=[DataRequired()])
+    age = IntegerField("Возраст", validators=[DataRequired()])
+    city = StringField("Город", validators=[DataRequired()])
+    about = TextAreaField("Немного о себе", validators=[DataRequired()])
+    submit = SubmitField("Регистрация")
+
+
+@app.route("/register")
+def register():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        if form.password.data != form.password_again.data:
+            return render_template(
+                "register.html",
+                title="Регистрация",
+                form=form,
+                message="Пароли не совпадают",
+            )
+    return render_template("register.html", title="Регистрация", form=form)
+
+
+class LoginForm(FlaskForm):
+    email = EmailField("Почта", validators=[DataRequired()])
+    password = PasswordField("Пароль", validators=[DataRequired()])
+    remember_me = BooleanField("Запомнить меня")
+    submit = SubmitField("Войти")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        return render_template(
+            "login.html", message="Неправильный логин или пароль", form=form
+        )
+    return render_template("login.html", title="Авторизация", form=form)
 
 
 @app.errorhandler(404)
