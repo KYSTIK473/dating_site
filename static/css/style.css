@@ -6,9 +6,16 @@ p{
     margin: 0;
 }
 
-.container{
+.header{
+    position: fixed;
+    width: 100%;
+    overflow: auto;
     display: block;
-  padding: 10px;
+}
+
+.container{
+    padding-top: 6em;
+
 }
 
 .block{
@@ -17,6 +24,7 @@ p{
     display: flex;
     justify-content: space-between;
     background-color: wheat;
+    margin: 5% 5% 0 0;
 }
 
 .block img{
@@ -32,4 +40,10 @@ p{
 }
 .more{
     float: right;
+}
+
+.about_register{
+    height: 40px;
+    overflow: hidden;
+    resize: none;
 }
