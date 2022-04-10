@@ -9,3 +9,26 @@ textArea.forEach(item => {
         $this.style.height = $this.scrollHeight + 'px';
     });
 });
+
+
+function download(input) {
+    try {
+        let file = input.files[0];
+        let reader = new FileReader();
+        reader.readAsDataURL(file);
+        let wrapper = document.getElementById('ava_img');
+        if (file.name.length > 0) {
+            reader.onload = function () {
+                wrapper.src = reader.result;
+            }
+        }
+        else {
+            console.log(10);
+            wrapper.src = null;
+        }
+    } catch {
+        let wrapper = document.getElementById('ava_img');
+        wrapper.src = null;
+
+    }
+}
