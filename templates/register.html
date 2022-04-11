@@ -70,14 +70,14 @@
     </p>
     {% endfor %}
     </p>
-    <div class="profile-load">
+    <div class="profile_load">
         {{ form.img.label }}<br>
         <div class="chose_img">
             <div>
                 {{ form.img(class="form-control about_register", onchange="download(this)")}}
             </div>
             <div class="ava">
-                <img src="" alt="" id="ava_img">
+                <img src="static/img/1.png" alt="" id="ava_img" width="300" height="300">
             </div>
         </div>
         {% for error in form.img.errors %}
@@ -87,7 +87,7 @@
         {% endfor %}
     </div>
 
-    <p>{{ form.submit(type="submit", class="btn btn-primary") }}</p>
+    <p class="footer">{{ form.submit(type="submit", class="btn btn-primary") }}</p>
     {{message}}
 </form>
 {% endblock %}

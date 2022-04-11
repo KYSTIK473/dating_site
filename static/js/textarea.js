@@ -23,12 +23,11 @@ function download(input) {
             }
         }
         else {
-            console.log(10);
-            wrapper.src = null;
+            wrapper.src = 'static/img/1.png';
         }
     } catch {
         let wrapper = document.getElementById('ava_img');
-        wrapper.src = null;
+        wrapper.src = 'static/img/1.png';
 
     }
 }

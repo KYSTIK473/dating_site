@@ -48,3 +48,15 @@ p{
     overflow: hidden;
     resize: none;
 }
+
+.profile_load{
+    margin-bottom: 2%;
+}
+
+.ava{
+    margin-top: 3%;
+}
+
+.footer{
+    padding-bottom: 5%;
+}
