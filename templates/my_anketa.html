@@ -1,0 +1,56 @@
+{% extends "index.html" %}
+
+{% block content %}
+<h1>Регистрация</h1>
+<form action="" method="post" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}=
+    <p>
+        {{ form.age.label }}<br>
+        {{ form.age(class="form-control") }}<br>
+        {% for error in form.age.errors %}
+    <p class="alert alert-danger" role="alert">
+        {{ error }}
+    </p>
+    {% endfor %}
+    </p>
+
+    <p>
+        {{ form.city.label }}<br>
+        {{ form.city(class="form-control") }}<br>
+        {% for error in form.city.errors %}
+    <p class="alert alert-danger" role="alert">
+        {{ error }}
+    </p>
+    {% endfor %}
+    </p>
+
+    <p>
+        {{ form.about.label }}<br>
+        {{ form.about(class="form-control about_register")}}<br>
+        {% for error in form.about.errors %}
+    <p class="alert alert-danger" role="alert">
+        {{ error }}
+    </p>
+    {% endfor %}
+    </p>
+    <div class="profile_load">
+        {{ form.img.label }}<br>
+        <div class="chose_img">
+            <div>
+                {{ form.img(class="form-control about_register", onchange="download(this)")}}
+            </div>
+            <div class="ava">
+                <img src="{{src}}" alt="" id="ava_img" width="300" height="300">
+            </div>
+        </div>
+        {% for error in form.img.errors %}
+        <p class="alert alert-danger" role="alert">
+            {{ error }}
+        </p>
+        {% endfor %}
+    </div>
+
+    <p class="footer">{{ form.submit(type="submit", class="btn btn-primary") }}</p>
+    {{message}}
+</form>
+{% endblock %}

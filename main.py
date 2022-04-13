@@ -1,5 +1,6 @@
 from PIL import Image
 import datetime
+import os
 import flask
 import sqlalchemy
 from sqlalchemy import orm
@@ -91,7 +92,7 @@ def my_form():
         )
     )
     return render_template(
-        "my_anketa.html", title="Моя анкета", form=form, src=f"static/img/{usr.img}"
+        "my_anketa.html", title="Моя анкета", form=form, src=f"static/img/{user.img}"
     )
 
 
