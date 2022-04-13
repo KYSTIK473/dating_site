@@ -1,4 +1,4 @@
-import datetime
+from PIL import Image
 import datetime
 import flask
 import sqlalchemy
@@ -13,6 +13,7 @@ from werkzeug.exceptions import abort
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import redirect, secure_filename
 from sqlalchemy_serializer import SerializerMixin
+from werkzeug.datastructures import MultiDict
 from wtforms import (
     PasswordField,
     StringField,
@@ -55,7 +56,43 @@ def load_user(user_id):
 
 @app.route("/")
 def index():
-    return render_template("main.html")
+    if current_user.is_authenticated:
+        src = current_user.img
+        return render_template("main.html", src=f"static/img/{src}")
+    else:
+        return render_template("main.html")
+
+
+class MyForm(FlaskForm):
+    age = IntegerField("Возраст", validators=[DataRequired()])
+    city = StringField("Город", validators=[DataRequired()])
+    about = TextAreaField("Немного о себе", validators=[DataRequired()])
+    img = FileField("Аватар", validators=[DataRequired()])
+    submit = SubmitField("Изменить")
+
+
+class UserForm(FlaskForm):
+    submit = SubmitField("Откликнуться")
+    submit1 = SubmitField("В главное меню")
+
+
+@app.route("/user", methods=["GET", "POST"])
+def userlike():
+    form = UserForm()
+    return render_template("register1.html", title="Анкета пользователя", form=form)
+
+
+@app.route("/my_anketa", methods=["GET", "POST"])
+def my_form():
+    user = current_user
+    form = MyForm(
+        formdata=MultiDict(
+            {"age": f"{user.age}", "city": f"{user.city}", "about": f"{user.about}"}
+        )
+    )
+    return render_template(
+        "my_anketa.html", title="Моя анкета", form=form, src=f"static/img/{usr.img}"
+    )
 
 
 class RegisterForm(FlaskForm):
@@ -90,11 +127,12 @@ def register():
                 message="Такой пользователь уже есть",
             )
         last_id = db_sess.query(User).order_by(User.id)[-1].id
-        print(last_id)
         filename = secure_filename(form.img.data.filename)
         new_filename = f"{int(last_id) + 1}.{filename.split('.')[-1]}"
-        print(new_filename)
         form.img.data.save("static/img/" + new_filename)
+        foo = Image.open(f"static/img/{new_filename}")
+        foo = foo.resize((300, 300), Image.ANTIALIAS)
+        foo.save(f"static/img/{new_filename}", optimize=True, quality=95)
         user = User(
             name=form.name.data,
             email=form.email.data,
@@ -135,7 +173,7 @@ def login():
         user = db_sess.query(User).filter(User.email == form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
-            return redirect("/")
+            return redirect("/my_anketa")
         return render_template(
             "login.html", message="Неправильный логин или пароль", form=form
         )
