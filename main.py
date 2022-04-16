@@ -55,14 +55,24 @@ def load_user(user_id):
     return db_sess.query(User).get(user_id)
 
 
-@app.route("/")
-def index():
+def render_temp(name_rend):
     if current_user.is_authenticated:
         src = current_user.img
-        return render_template("main.html", src=f"static/img/{src}")
+        return render_template(name_rend, src=f"static/img/{src}")
     else:
-        return render_template("main.html")
+        return render_template(name_rend)
 
+
+@app.route("/")
+def index():
+    db_sess = create_session()
+    news = db_sess.query(User)
+    news = news[1::]
+    if current_user.is_authenticated:
+        src = current_user.img
+        return render_template("main.html", news=news,  src=f"static/img/{src}")
+    else:
+        return render_template("main.html", news=news)
 
 class MyForm(FlaskForm):
     age = IntegerField("Возраст", validators=[DataRequired()])
@@ -80,20 +90,47 @@ class UserForm(FlaskForm):
 @app.route("/user", methods=["GET", "POST"])
 def userlike():
     form = UserForm()
-    return render_template("register1.html", title="Анкета пользователя", form=form)
+    if current_user.is_authenticated:
+        src = current_user.img
+        return render_template("register1.html", title="Анкета пользователя", form=form, src=f"static/img/{src}")
+    else:
+        return render_template("register1.html", title="Анкета пользователя", form=form)
 
 
 @app.route("/my_anketa", methods=["GET", "POST"])
 def my_form():
-    user = current_user
-    form = MyForm(
-        formdata=MultiDict(
-            {"age": f"{user.age}", "city": f"{user.city}", "about": f"{user.about}"}
-        )
-    )
-    return render_template(
-        "my_anketa.html", title="Моя анкета", form=form, src=f"static/img/{user.img}"
-    )
+    form = MyForm()
+    if request.method == "GET":
+        db_sess = create_session()
+        news = db_sess.query(User).filter(User.id == current_user.id
+                                          ).first()
+        if news:
+            form.age.data = news.age
+            form.city.data = news.city
+            form.about.data = news.about
+        else:
+            abort(404)
+    if form.validate_on_submit():
+        db_sess = create_session()
+        news = db_sess.query(User).filter(User.id == current_user.id
+                                          ).first()
+        if news:
+            filename = secure_filename(form.img.data.filename)
+            new_filename = f"{int(current_user.id) + 1}.{filename.split('.')[-1]}"
+            print(new_filename)
+            news.age = form.age.data
+            news.city = form.city.data
+            news.about = form.about.data
+            news.img = new_filename
+            db_sess.commit()
+            return redirect('/')
+        else:
+            abort(404)
+    if current_user.is_authenticated:
+        src = current_user.img
+        return render_template("my_anketa.html", title="Редактирование новости", form=form, src=f"static/img/{src}")
+    else:
+        return render_template("my_anketa.html", title="Редактирование новости", form=form)
 
 
 class RegisterForm(FlaskForm):
