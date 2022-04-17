@@ -1,0 +1,62 @@
+body{
+    background-color: #D8D1E2;
+}
+
+
+p{
+    margin: 0;
+}
+
+.header{
+    position: fixed;
+    width: 100%;
+    overflow: auto;
+    display: block;
+}
+
+.container{
+    padding-top: 6em;
+
+}
+
+.block{
+    border: 1px solid black;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    background-color: wheat;
+    margin: 5% 5% 0 0;
+}
+
+.block img{
+    flex: 0 0 auto;
+    align-self: center;
+    margin-left: 10px;
+
+}
+
+.txt_user{
+    width: 60%;
+    margin: auto;
+}
+.more{
+    float: right;
+}
+
+.about_register{
+    height: 40px;
+    overflow: hidden;
+    resize: none;
+}
+
+.profile_load{
+    margin-bottom: 2%;
+}
+
+.ava{
+    margin-top: 3%;
+}
+
+.footer{
+    padding-bottom: 5%;
+}

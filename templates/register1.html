@@ -1,0 +1,15 @@
+{% extends "index.html" %}
+
+{% block content %}
+<h1>Анкета пользователя</h1>
+<form action="" method="post" enctype="multipart/form-data" class="from_about">
+    {{ form.hidden_tag() }}
+    <div class="ava">
+        <img class="imgsize" src="static/img/1.png" alt="" id="ava_img" width="300" height="300">
+    </div>
+    <p class="footer">{{ form.submit(type="submit", class="btn btn-primary btnp") }}</p>
+
+    <a class="btn btn-success" href="/">В главное меню</a>
+    {{message}}
+</form>
+{% endblock %}
