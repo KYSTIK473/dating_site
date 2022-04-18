@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js" integrity="sha512-MgkNs0gNdrnOM7k+0L+wgiRc5aLgl74sJQKbIWegVIMvVGPc1+gc1L2oK9Wf/D9pq58eqIJAxOonYPVE5UwUFA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <title>Chat</title>
+</head>
+<body>
+    <h3>Chat</h3>
+    <textarea id="textarea" rows="20" cols="80" readonly></textarea>
+    <br>
+    <input type="text" placeholder="Enter text" id="input">
+    <br>
+    <button id="button">Send</button>
+
+    <script type="text/javascript">
+    	const textarea = document.getElementById("textarea")
+    	const input = document.getElementById("input")
+    	const button = document.getElementById("button")
+
+    	const socket = io.connect('http://127.0.0.1:5000/chat')
+
+    	socket.on('connect', () => {
+    		socket.send('Customer joined')
+    	})
+
+    	socket.on('message', data => {
+    		textarea.value += data + '\n'
+    	})
+
+    	button.addEventListener('click', () => socket.send(input.value));
+</script>
+</body>
+</html>
