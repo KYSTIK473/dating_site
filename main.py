@@ -91,9 +91,45 @@ class UserForm(FlaskForm):
     submit1 = SubmitField("В главное меню")
 
 
-@app.route("/user", methods=["GET", "POST"])
-def userlike():
+@app.route("/user/<int:id>", methods=["GET", "POST"])
+@login_required
+def userlike(id):
     form = UserForm()
+    db_sess = create_session()
+    user = db_sess.query(User).filter(User.id == current_user.id).first()
+    if form.validate_on_submit():
+        print(1)
+        if db_sess.query(Responses).filter(Responses.id_person == current_user.id).first():
+            resp_one = db_sess.query(Responses).filter(Responses.id_person == current_user.id).first()
+            stroka1 = resp_one.id_person_responses
+            stroka1 = stroka1 + f' {id}'
+            stroka2 = resp_one.id_responses_to_person
+            resp_one.id_person_responses = stroka1
+            resp_one.id_responses_to_person = stroka2
+            db_sess.commit()
+        else:
+            response = Responses(
+                id_person=id,
+                id_person_responses=id,
+                id_responses_to_person=''
+            )
+            user.news.append(response)
+            db_sess.commit()
+        if db_sess.query(Responses).filter(Responses.id == id).first():
+            resp_one = db_sess.query(Responses).filter(Responses.id == id).first()
+            stroka1 = resp_one.id_person_responses
+            stroka1 = stroka1 + f' {id}'
+            stroka2 = resp_one.id_responses_to_person
+            resp_one.id_person_responses = stroka1
+            resp_one.id_responses_to_person = stroka2
+        else:
+            response = Responses(
+                id_person=id,
+                id_person_responses='',
+                id_responses_to_person=current_user.id
+            )
+            db_sess.add(response)
+            db_sess.commit()
     if current_user.is_authenticated:
         src = current_user.img
         return render_template("register1.html", title="Анкета пользователя", form=form, src=f"static/img/{src}")
@@ -130,11 +166,8 @@ def my_form():
             return redirect('/')
         else:
             abort(404)
-    if current_user.is_authenticated:
-        src = current_user.img
-        return render_template("my_anketa.html", title="Редактирование новости", form=form, src=f"static/img/{src}")
-    else:
-        return render_template("my_anketa.html", title="Редактирование новости", form=form)
+    src = current_user.img
+    return render_template("my_anketa.html", title="Редактирование новости", form=form, src=f"static/img/{src}")
 
 
 class RegisterForm(FlaskForm):
@@ -327,9 +360,6 @@ def login():
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
             return redirect("/my_anketa")
-        return render_template(
-            "login.html", message="Неправильный логин или пароль", form=form
-        )
     return render_template("login.html", title="Авторизация", form=form)
 
 
