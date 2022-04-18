@@ -1,6 +1,9 @@
 from PIL import Image
 import datetime
 import os
+from bibl import sovmest, info_people
+import sqlite3
+from flask import url_for
 import flask
 import sqlalchemy
 from sqlalchemy import orm
@@ -55,14 +58,25 @@ def load_user(user_id):
     return db_sess.query(User).get(user_id)
 
 
-@app.route("/")
-def index():
+def render_temp(name_rend):
     if current_user.is_authenticated:
         src = current_user.img
-        return render_template("main.html", src=f"static/img/{src}")
+        return render_template(name_rend, src=f"static/img/{src}")
     else:
-        return render_template("main.html")
+        return render_template(name_rend)
 
+
+@app.route("/")
+def index():
+    db_sess = create_session()
+    if current_user.is_authenticated:
+        src = current_user.img
+        news = sovmest(int(current_user.id))
+        return render_template("main.html", news=news,  src=f"static/img/{src}")
+    else:
+        news = db_sess.query(User)
+        news = news[1::]
+        return render_template("main.html", news=news)
 
 class MyForm(FlaskForm):
     age = IntegerField("Возраст", validators=[DataRequired()])
@@ -80,20 +94,47 @@ class UserForm(FlaskForm):
 @app.route("/user", methods=["GET", "POST"])
 def userlike():
     form = UserForm()
-    return render_template("register1.html", title="Анкета пользователя", form=form)
+    if current_user.is_authenticated:
+        src = current_user.img
+        return render_template("register1.html", title="Анкета пользователя", form=form, src=f"static/img/{src}")
+    else:
+        return render_template("register1.html", title="Анкета пользователя", form=form)
 
 
 @app.route("/my_anketa", methods=["GET", "POST"])
 def my_form():
-    user = current_user
-    form = MyForm(
-        formdata=MultiDict(
-            {"age": f"{user.age}", "city": f"{user.city}", "about": f"{user.about}"}
-        )
-    )
-    return render_template(
-        "my_anketa.html", title="Моя анкета", form=form, src=f"static/img/{user.img}"
-    )
+    form = MyForm()
+    if request.method == "GET":
+        db_sess = create_session()
+        news = db_sess.query(User).filter(User.id == current_user.id
+                                          ).first()
+        if news:
+            form.age.data = news.age
+            form.city.data = news.city
+            form.about.data = news.about
+        else:
+            abort(404)
+    if form.validate_on_submit():
+        db_sess = create_session()
+        news = db_sess.query(User).filter(User.id == current_user.id
+                                          ).first()
+        if news:
+            filename = secure_filename(form.img.data.filename)
+            new_filename = f"{int(current_user.id) + 1}.{filename.split('.')[-1]}"
+            print(new_filename)
+            news.age = form.age.data
+            news.city = form.city.data
+            news.about = form.about.data
+            news.img = new_filename
+            db_sess.commit()
+            return redirect('/')
+        else:
+            abort(404)
+    if current_user.is_authenticated:
+        src = current_user.img
+        return render_template("my_anketa.html", title="Редактирование новости", form=form, src=f"static/img/{src}")
+    else:
+        return render_template("my_anketa.html", title="Редактирование новости", form=form)
 
 
 class RegisterForm(FlaskForm):
@@ -107,6 +148,116 @@ class RegisterForm(FlaskForm):
     img = FileField("Аватар", validators=[DataRequired()])
     submit = SubmitField("Регистрация")
 
+@app.route('/test/<int:ID>/<mess>', methods=['POST', 'GET'])
+def test(ID, mess):
+    # Подключение к БД
+    con = sqlite3.connect("db/data.db")
+    # Создание курсора
+    cur = con.cursor()
+
+
+    if request.method == 'GET':
+        return f"""<!doctype html>  
+                    <html lang="en">
+                      <head>
+                        <meta charset="utf-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+                        <link rel="stylesheet" 
+                        href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" 
+                        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" 
+                        crossorigin="anonymous">
+                        <link rel="stylesheet" type="text/css" href="{url_for('static', filename='css/test.css')}" />
+                        <title>Тест</title>
+                      </head>
+                      <body>
+                        <p align="center">{mess}</p>
+                        <h1 align="center">Входное</h1>
+                        <h2 align="center">тестирование</h2>
+                        <div>
+                            <form class="login_form" method="post">                
+                                    <div class="form-group">
+                                        <label for="form-check">Выберите наиболее близкое вам утверждение</label>
+                                        <div class="form-check">
+                                          <input class="form-check-input" type="radio" name="first" id="E" value="E">
+                                          <label class="form-check-label" for="E">
+                                            Вы человек откытый и разговорчивый, легко сходитесь с новми людьми.
+                                          </label>
+                                        </div>
+                                        <div class="form-check">
+                                          <input class="form-check-input" type="radio" name="first" id="I" value="I">
+                                          <label class="form-check-label" for="I">
+                                            Вы неторопливы, держаны в общении, насторожены к новым людям.
+                                          </label>
+                                        </div>
+                                    <div class="form-group">
+                                        <label for="form-check">Выберите наиболее близкое вам утверждение</label>
+                                        <div class="form-check">
+                                          <input class="form-check-input" type="radio" name="second" id="S" value="S">
+                                          <label class="form-check-label" for="S">
+                                            Вы реалист и прагматик. Старое и проверенное предпочитаете новому.
+                                          </label>
+                                        </div>
+                                        <div class="form-check">
+                                          <input class="form-check-input" type="radio" name="second" id="N" value="N">
+                                          <label class="form-check-label" for="N">
+                                            Вы склонны доверять своей интуиции. Новое предпочитаете старому.
+                                          </label>
+                                        </div>
+                                    <div class="form-group">
+                                        <label for="form-check">Выберите наиболее близкое вам утверждение</label>
+                                        <div class="form-check">
+                                          <input class="form-check-input" type="radio" name="third" id="T" value="T">
+                                          <label class="form-check-label" for="T">
+                                            Вы ставите логику выше чувств, удите о людях нзависимо от симпатий к ним.
+                                          </label>
+                                        </div>
+                                        <div class="form-check">
+                                          <input class="form-check-input" type="radio" name="third" id="F" value="F">
+                                          <label class="form-check-label" for="F">
+                                            Вы склонны идти на компромиссы в делах ради гармоничных отношений отношений.
+                                            Доверяете своим чувствам.
+                                          </label>
+                                        </div>
+                                    <div class="form-group">
+                                        <label for="form-check">Выберите наиболее близкое вам утверждение</label>
+                                        <div class="form-check">
+                                          <input class="form-check-input" type="radio" name="fourth" id="J" value="J">
+                                          <label class="form-check-label" for="J">
+                                            Вы последовательны в работе, решения принимаете однозначно и не любите их менять.
+                                          </label>
+                                        </div>
+                                        <div class="form-check">
+                                          <input class="form-check-input" type="radio" name="fourth" id="P" value="P">
+                                          <label class="form-check-label" for="P">
+                                            Вы можете гибко приспосбливать к условиям свои решения. Не терпите формализма.
+                                          </label>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Отправить</button>
+                                    </form>        
+                        </div>
+                      </body>
+                    </html>"""
+
+    elif request.method == 'POST':
+        if not request.form.get('first') or not request.form.get('second') or not request.form.get('third') or\
+                not request.form.get('fourth'):
+            er = 'Не все поля заполнены'
+            return redirect(url_for(".test",ID=ID, mess=er))
+
+
+        s_param = """INSERT INTO pr_test (id, v1, v2, v3, v4)
+                                      VALUES (?, ?, ?, ?, ?);"""
+
+        dat = (ID, request.form['first'], request.form['second'], request.form['third'], request.form['fourth'])
+        print(dat)
+        cur.execute(s_param, dat)
+
+        con.commit()
+        con.close()
+        a = sovmest(ID)
+
+        return redirect("/login")
+        #return "Форма отправлена"
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -145,7 +296,8 @@ def register():
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
-        return redirect("/login")
+        return redirect(url_for(".test",ID=last_id+1,mess='Заполните все поля'))
+
     return render_template("register.html", title="Регистрация", form=form)
 
 
@@ -175,9 +327,6 @@ def login():
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
             return redirect("/my_anketa")
-        return render_template(
-            "login.html", message="Неправильный логин или пароль", form=form
-        )
     return render_template("login.html", title="Авторизация", form=form)
 
 
