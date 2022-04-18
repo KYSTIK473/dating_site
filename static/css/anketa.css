@@ -3,13 +3,17 @@ body {
 }
 
 .btnp {
-  margin-bottom: 20%;
+  margin-bottom: 5%;
   color: #D8D1E2;
   padding: 20px 25px;
 }
 
 .imgsize{
   margin-top: 20%;
+}
+
+.from_about{
+  padding-bottom: 5%;
 }
 
 p {
