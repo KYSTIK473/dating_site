@@ -12,22 +12,29 @@ textArea.forEach(item => {
 
 
 function download(input) {
+    let wrapper = document.getElementById('ava_img');
+    var fileName = input.value;
+    console.log(fileName);
+        var idxDot = fileName.lastIndexOf(".") + 1;
+        var extFile = fileName.substr(idxDot, fileName.length).toLowerCase();
+        if (extFile=="jpg" || extFile=="jpeg" || extFile=="png"){
     try {
         let file = input.files[0];
         let reader = new FileReader();
         reader.readAsDataURL(file);
-        let wrapper = document.getElementById('ava_img');
         if (file.name.length > 0) {
             reader.onload = function () {
                 wrapper.src = reader.result;
             }
         }
-        else {
-            wrapper.src = 'static/img/1.png';
-        }
     } catch {
-        let wrapper = document.getElementById('ava_img');
         wrapper.src = 'static/img/1.png';
 
     }
+    }
+    else{
+            wrapper.src = '/static/img/1.png';
+            input.value = null;
+            alert("Выберите картинку png/jpg/jpeg!");
+        }
 }

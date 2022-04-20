@@ -74,10 +74,10 @@
         {{ form.img.label }}<br>
         <div class="chose_img">
             <div>
-                {{ form.img(class="form-control about_register", onchange="download(this)")}}
+                {{ form.img(class="form-control about_register", accept=".jpg,.jpeg,.png", onchange="download(this)")}}
             </div>
             <div class="ava">
-                <img src="static/img/1.png" alt="" id="ava_img" width="300" height="300">
+                <img src="/static/img/1.png" alt="" id="ava_img" width="300" height="300">
             </div>
         </div>
         {% for error in form.img.errors %}

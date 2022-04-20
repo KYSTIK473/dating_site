@@ -43,6 +43,7 @@ from data.users import User
 from data.responses import Responses
 from data.rooms import Room
 from data.messages import Msg
+from data import news_api
 from sqlalchemy import or_, and_
 from flask_socketio import SocketIO
 from flask_socketio import emit, join_room, leave_room
@@ -63,11 +64,13 @@ def create_app(debug=False):
 
 app = create_app(debug=True)
 api = Api(app)
+app.register_blueprint(news_api.blueprint)
 login_manager = LoginManager()
 login_manager.init_app(app)
 UPLOAD_FOLDER = "/static/img"
 app.config["SECRET_KEY"] = "yandexlyceum_secret_key"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config['JSON_AS_ASCII'] = False
 
 
 @login_manager.user_loader
@@ -128,44 +131,73 @@ def userlike(id):
     db_sess = create_session()
     user = db_sess.query(User).filter(User.id == current_user.id).first()
     if form.validate_on_submit():
-        print(1)
         if db_sess.query(Responses).filter(Responses.id_person == current_user.id).first():
             resp_one = db_sess.query(Responses).filter(Responses.id_person == current_user.id).first()
             stroka1 = resp_one.id_person_responses
-            stroka1 = stroka1 + f' {id}'
-            stroka2 = resp_one.id_responses_to_person
+            if not stroka1:
+                stroka1 = ''
+            stroka1 = str(stroka1) + f' {id}'
             resp_one.id_person_responses = stroka1
-            resp_one.id_responses_to_person = stroka2
             db_sess.commit()
         else:
             response = Responses(
                 id_person=id,
-                id_person_responses=id,
+                id_person_responses=current_user.id,
                 id_responses_to_person=''
             )
             user.news.append(response)
             db_sess.commit()
-        if db_sess.query(Responses).filter(Responses.id == id).first():
-            resp_one = db_sess.query(Responses).filter(Responses.id == id).first()
-            stroka1 = resp_one.id_person_responses
-            stroka1 = stroka1 + f' {id}'
-            stroka2 = resp_one.id_responses_to_person
-            resp_one.id_person_responses = stroka1
-            resp_one.id_responses_to_person = stroka2
+        if db_sess.query(Responses).filter(Responses.id_person == id).first():
+            resp_one = db_sess.query(Responses).filter(Responses.id_person == id).first()
+            stroka1 = resp_one.id_responses_to_person
+            if not stroka1:
+                stroka1 = ''
+            stroka1 = str(stroka1) + f' {current_user.id}'
+            resp_one.id_responses_to_person = stroka1
+            db_sess.commit()
         else:
             response = Responses(
                 id_person=id,
                 id_person_responses='',
-                id_responses_to_person=current_user.id
-            )
+                id_responses_to_person=current_user.id)
             db_sess.add(response)
             db_sess.commit()
+        user = db_sess.query(Responses).filter(Responses.id_person == current_user.id).first()
+        resp_user = user.id_person_responses
+        resp_user = resp_user.split()
+        resp_user = list(map(int, resp_user))
+        resp_to_user = user.id_responses_to_person
+        resp_to_user = resp_to_user.split()
+        resp_to_user = list(map(int, resp_to_user))
+        print(resp_user, resp_to_user)
+        for i in resp_user:
+            if i in resp_to_user:
+                arr = user.vz_responses
+                if arr:
+                    arr = arr.split()
+                    arr = list(map(int, arr))
+                    if i not in arr:
+                        print(123)
+                        user.vz_responses = user.vz_responses + f' {i}'
+                        user1 = db_sess.query(Responses).filter(Responses.id_person == i).first()
+                        if user1.vz_responses:
+                            user1.vz_responses = user1.vz_responses + f' {current_user.id}'
+                        else:
+                            user1.vz_responses = f'{current_user.id}'
+                        db_sess.commit()
+                else:
+                    user.vz_responses = f'{i}'
+                    user1 = db_sess.query(Responses).filter(Responses.id_person == i).first()
+                    if user1.vz_responses:
+                        user1.vz_responses = user1.vz_responses + f' {current_user.id}'
+                    else:
+                        user1.vz_responses = f'{current_user.id}'
+                    db_sess.commit()
+        return redirect('/')
     if current_user.is_authenticated:
         src = current_user.img
-        src1 = db_sess.query(User).filter(User.id == id)
-        return render_template("register1.html", title="Анкета пользователя", form=form, src=f"/static/img/{src}", news=src1)
-    else:
-        return render_template("register1.html", title="Анкета пользователя", form=form)
+        user3 = db_sess.query(User).filter(User.id == id)
+        return render_template("register1.html", title="Анкета пользователя", form=form, src=f"static/img/{src}", news=user3)
 
 
 @app.route("/my_anketa", methods=["GET", "POST"])
@@ -188,8 +220,16 @@ def my_form():
                                           ).first()
         if news:
             if form.img.data.filename:
+                try:
+                    os.remove(f"static/img/{news.img}")
+                except FileNotFoundError:
+                    pass
                 filename = secure_filename(form.img.data.filename)
                 new_filename = f"{int(current_user.id)}.{filename.split('.')[-1]}"
+                form.img.data.save("static/img/" + new_filename)
+                foo = Image.open(f"static/img/{new_filename}")
+                foo = foo.resize((300, 300), Image.ANTIALIAS)
+                foo.save(f"static/img/{new_filename}", optimize=True, quality=95)
                 news.img = new_filename
             news.name = form.name.data
             news.age = form.age.data
@@ -200,15 +240,38 @@ def my_form():
         else:
             abort(404)
     src = current_user.img
-    return render_template("my_anketa.html", title="Редактирование новости", form=form, src=f"static/img/{src}")
+    return render_template("my_anketa.html", title="Анкета пользователя", form=form, src=f"static/img/{src}")
 
+@app.route("/my_likes", methods=["GET", "POST"])
+def likes():
+    try:
+        db_sess = create_session()
+        user = db_sess.query(Responses).filter(Responses.id_person == current_user.id).first()
+        arr = list(set(list(map(int, user.vz_responses.split()))))
+        arr1 = list(set(list(map(int, user.id_responses_to_person.split()))))
+        users = []
+        for i in arr1:
+            if i not in arr:
+                usern = db_sess.query(User).filter(User.id == i).first()
+                users.append(usern)
+        return render_template("chat_user.html", title="Кому я понравился", news=users, id=current_user.id,
+                               src=f"static/img/{current_user.img}")
+    except Exception:
+        return redirect('/')
 
 @app.route("/chat_user", methods=["GET", "POST"])
 def chat_user():
-    db_sess = create_session()
-    news = db_sess.query(User)
-    news = news[1::]
-    return render_template("chat_user.html", news=news, id=current_user.id, src=f"static/img/{current_user.img}")
+    try:
+        db_sess = create_session()
+        user = db_sess.query(Responses).filter(Responses.id_person == current_user.id).first()
+        arr = list(set(list(map(int, user.vz_responses.split()))))
+        users = []
+        for i in arr:
+            usern = db_sess.query(User).filter(User.id == i).first()
+            users.append(usern)
+        return render_template("chat_user.html", title="Переписки", news=users, id=current_user.id, src=f"static/img/{current_user.img}")
+    except Exception:
+        return redirect('/')
 
 
 @app.route('/chat_user/<user2>', methods=["GET", "POST"])
@@ -441,11 +504,14 @@ def register():
             )
         last_id = db_sess.query(User).order_by(User.id)[-1].id
         filename = secure_filename(form.img.data.filename)
-        new_filename = f"{int(last_id) + 1}.{filename.split('.')[-1]}"
-        form.img.data.save("static/img/" + new_filename)
-        foo = Image.open(f"static/img/{new_filename}")
-        foo = foo.resize((300, 300), Image.ANTIALIAS)
-        foo.save(f"static/img/{new_filename}", optimize=True, quality=95)
+        if filename != '':
+            new_filename = f"{int(last_id) + 1}.{filename.split('.')[-1]}"
+            form.img.data.save("static/img/" + new_filename)
+            foo = Image.open(f"static/img/{new_filename}")
+            foo = foo.resize((300, 300), Image.ANTIALIAS)
+            foo.save(f"static/img/{new_filename}", optimize=True, quality=95)
+        else:
+            new_filename = '1.png'
         user = User(
             name=form.name.data,
             email=form.email.data,
@@ -507,6 +573,7 @@ def not_found(error):
 if __name__ == "__main__":
     global_init("db/data.db")
     socketio.run(app)
+    app.register_blueprint(news_api.blueprint)
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
 

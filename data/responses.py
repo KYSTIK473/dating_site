@@ -18,4 +18,5 @@ class Responses(SqlAlchemyBase, SerializerMixin):
     id_responses_to_person = sqlalchemy.Column(
         sqlalchemy.String, nullable=True, default=None
     )
+    vz_responses = sqlalchemy.Column(sqlalchemy.String, nullable=True, default=None)
     user = orm.relation("User")
