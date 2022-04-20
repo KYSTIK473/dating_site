@@ -4,7 +4,7 @@
 <h1>Анкеты</h1>
 {% for item in news%}
     <div class="block">
-        <img src="static/img/{{item.img}}" width="300" height="300"  alt="">
+        <div><img src="/static/img/{{item.img}}" width="300" height="300"  alt=""></div>
         <div class="txt_user">
             <div class="name">
                 Имя: {{item.name}}
@@ -19,9 +19,11 @@
                 <p>О себе</p>
                 {{item.about}}
             </div>
+            {% if current_user.is_authenticated %}
             <div class="more">
                 <a class="btn btn-success " href="/user/{{item.id}}">Подробнее</a>
             </div>
+            {% endif %}
         </div>
     </div>
 {% endfor %}

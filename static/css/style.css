@@ -1,3 +1,5 @@
+@import url('https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css')
+
 body{
     background-color: #D8D1E2;
 }
@@ -59,4 +61,70 @@ p{
 
 .footer{
     padding-bottom: 5%;
+}
+
+.chat_text{
+  resize: vertical;
+  border-radius:15px;
+  padding: 10px;
+  border:0;
+  box-shadow:4px 4px 10px rgba(0,0,0,0.06);
+  resize: none;
+}
+
+.type-1 {
+  display:block;
+  width:100%;
+  margin:10px 0;
+  padding:10px;
+}
+.type-1 {
+  border-radius:10px;
+  border: 1px solid #eee;
+  transition: .3s border-color;
+}
+.type-1:hover {
+  border: 1px solid #aaa;
+}
+
+.adapt{
+display: none;
+}
+
+@media (max-width: 992px) {
+    .block{
+    display: flex;
+    flex-flow: column;
+    align-items: center;
+    }
+    .txt_user{
+    margin-top: 5%;
+    }
+    .d-flex{
+    display: block;
+    }
+    .chat_text{
+    width: 100%;
+    }
+    #text{
+    margin-left: 0;
+    }
+}
+
+@media (max-width: 576px) {
+    .adapt{
+    display: block;
+    }
+    .burger_open{
+    position: absolute;
+    float: left;
+    height: 100vh;
+    }
+    .burger_open_li{
+    list-style-type: none;
+    margin: 3%;
+    }
+    .noadapt{
+    display: none;
+    }
 }

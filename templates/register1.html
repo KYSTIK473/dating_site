@@ -4,10 +4,27 @@
 <h1>Анкета пользователя</h1>
 <form action="" method="post" enctype="multipart/form-data" class="from_about">
     {{ form.hidden_tag() }}
-    <div class="ava">
-        <img class="imgsize" src="static/img/1.png" alt="" id="ava_img" width="300" height="300">
+    {% for item in news%}
+    <div class="block">
+        <div><img src="/static/img/{{item.img}}" width="300" height="300"  alt=""></div>
+        <div class="txt_user">
+            <div class="name">
+                Имя: {{item.name}}
+            </div>
+            <div class="age">
+                Возраст: {{item.age}}
+            </div>
+            <div class="city">
+                Город: {{item.city}}
+            </div>
+            <div class="about">
+                <p>О себе</p>
+                {{item.about}}
+            </div>
+        </div>
     </div>
-    <p class="footer">{{ form.submit(type="submit", class="btn btn-primary btnp") }}</p>
+{% endfor %}
+    <p class="footer mt-3">{{ form.submit(type="submit", class="btn btn-primary btnp") }}</p>
 
     <a class="btn btn-success" href="/">В главное меню</a>
     {{message}}

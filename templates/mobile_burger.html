@@ -1,0 +1,19 @@
+{% extends "index.html" %}
+
+{% block content %}
+<ul class="adapt" class="burger_open">
+    {% if current_user.is_authenticated %}
+    <li class="burger_open_li"><a class="btn btn-danger" href="/my_anketa">Моя анкета</a></li>
+    <li class="burger_open_li"><a class="btn btn-danger" href="/chat_user">Чат</a></li>
+    <li class="burger_open_li"><a class="navbar-brand" href="/logout"><img
+            src={{src}} alt="" width="75" height="75"></a></li>
+    {% else %}
+    <li class="burger_open_li">
+        <a class="btn btn-primary " href="/register">Зарегистрироваться</a>
+    </li>
+    <li class="burger_open_li">
+        <a class="btn btn-success" href="/login">Войти</a>
+    </li>
+    {% endif %}
+</ul>
+{% endblock %}

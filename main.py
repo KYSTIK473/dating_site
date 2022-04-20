@@ -7,7 +7,7 @@ from flask import url_for
 import flask
 import sqlalchemy
 from sqlalchemy import orm
-from flask import Flask, render_template, request, jsonify, make_response
+from flask import Flask, render_template, request, jsonify, make_response, session
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import Session
@@ -41,8 +41,27 @@ from flask_restful import reqparse, abort, Api, Resource
 from data.db_session import create_session, global_init
 from data.users import User
 from data.responses import Responses
+from data.rooms import Room
+from data.messages import Msg
+from sqlalchemy import or_, and_
+from flask_socketio import SocketIO
+from flask_socketio import emit, join_room, leave_room
 
-app = Flask(__name__)
+socketio = SocketIO()
+
+
+def create_app(debug=False):
+    """Create an application."""
+    app = Flask(__name__)
+    app.debug = debug
+    UPLOAD_FOLDER = "/static/img"
+    app.config["SECRET_KEY"] = "yandexlyceum_secret_key"
+    app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+    socketio.init_app(app)
+    return app
+
+
+app = create_app(debug=True)
 api = Api(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -72,17 +91,28 @@ def index():
     if current_user.is_authenticated:
         src = current_user.img
         news = sovmest(int(current_user.id))
-        return render_template("main.html", news=news,  src=f"static/img/{src}")
+        return render_template("main.html", news=news, src=f"static/img/{src}")
     else:
         news = db_sess.query(User)
         news = news[1::]
         return render_template("main.html", news=news)
 
+
+@app.route("/mobile_burger")
+def mobile_burger():
+    if current_user.is_authenticated:
+        src = current_user.img
+        return render_template("mobile_burger.html", src=f"static/img/{src}")
+    else:
+        return render_template("mobile_burger.html")
+
+
 class MyForm(FlaskForm):
+    name = StringField("Имя", validators=[DataRequired()])
     age = IntegerField("Возраст", validators=[DataRequired()])
     city = StringField("Город", validators=[DataRequired()])
     about = TextAreaField("Немного о себе", validators=[DataRequired()])
-    img = FileField("Аватар", validators=[DataRequired()])
+    img = FileField("Аватар")
     submit = SubmitField("Изменить")
 
 
@@ -132,7 +162,8 @@ def userlike(id):
             db_sess.commit()
     if current_user.is_authenticated:
         src = current_user.img
-        return render_template("register1.html", title="Анкета пользователя", form=form, src=f"static/img/{src}")
+        src1 = db_sess.query(User).filter(User.id == id)
+        return render_template("register1.html", title="Анкета пользователя", form=form, src=f"/static/img/{src}", news=src1)
     else:
         return render_template("register1.html", title="Анкета пользователя", form=form)
 
@@ -145,6 +176,7 @@ def my_form():
         news = db_sess.query(User).filter(User.id == current_user.id
                                           ).first()
         if news:
+            form.name.data = news.name
             form.age.data = news.age
             form.city.data = news.city
             form.about.data = news.about
@@ -155,19 +187,115 @@ def my_form():
         news = db_sess.query(User).filter(User.id == current_user.id
                                           ).first()
         if news:
-            filename = secure_filename(form.img.data.filename)
-            new_filename = f"{int(current_user.id) + 1}.{filename.split('.')[-1]}"
-            print(new_filename)
+            if form.img.data.filename:
+                filename = secure_filename(form.img.data.filename)
+                new_filename = f"{int(current_user.id)}.{filename.split('.')[-1]}"
+                news.img = new_filename
+            news.name = form.name.data
             news.age = form.age.data
             news.city = form.city.data
             news.about = form.about.data
-            news.img = new_filename
             db_sess.commit()
             return redirect('/')
         else:
             abort(404)
     src = current_user.img
     return render_template("my_anketa.html", title="Редактирование новости", form=form, src=f"static/img/{src}")
+
+
+@app.route("/chat_user", methods=["GET", "POST"])
+def chat_user():
+    db_sess = create_session()
+    news = db_sess.query(User)
+    news = news[1::]
+    return render_template("chat_user.html", news=news, id=current_user.id, src=f"static/img/{current_user.img}")
+
+
+@app.route('/chat_user/<user2>', methods=["GET", "POST"])
+def user_check(user2):
+    user1 = int(current_user.id)
+    user2 = int(user2)
+    if user1 > user2:
+        room = f'{user1}-{user2}'
+    else:
+        room = f'{user2}-{user1}'
+    db_sess = create_session()
+    zagr = 'False'
+    if db_sess.query(Room).filter(Room.id_room == room).first():
+        print('Есть созданная команта')
+        zagr = 'True'
+    else:
+        new_room = Room(
+            id_room=room
+        )
+        db_sess.add(new_room)
+        db_sess.commit()
+    user1_name = db_sess.query(User).filter(User.id == current_user.id).first()
+    session['name'] = user1_name.name
+    session['room'] = room
+    session['id_user_1'] = current_user.id
+    session['id_user_2'] = user2
+    return redirect(f"/chat/{zagr}")
+
+
+def return_messages(id1, id2):
+    print(id1, id2)
+    db_sess = create_session()
+    name_id1 = (db_sess.query(User).filter(User.id == id1).first()).name
+    name_id2 = (db_sess.query(User).filter(User.id == id2).first()).name
+    a = db_sess.query(Msg).where(
+        or_(and_(Msg.id_first == id1, Msg.id_second == id2), and_(Msg.id_first == id2, Msg.id_second == id1))).all()
+    stroka = ''
+    for i in a:
+        if i.id_first == id1:
+            stroka = stroka + f'{name_id1}:{i.message}\n'
+        else:
+            stroka = stroka + f'{name_id2}:{i.message}\n'
+    return stroka
+
+
+@app.route('/chat/<zagr>')
+def chat(zagr):
+    db_sess = create_session()
+    a = db_sess.query(Room).filter(Room.id_room == session.get('room', '')).first()
+    print(a.id_room)
+    t = ''
+    if zagr == 'True':
+        t = return_messages(session.get('id_user_1', ''), session.get('id_user_2', ''))
+    """Chat room. The user's name and room must be stored in
+    the session."""
+    name = session.get('name', '')
+    room = session.get('room', '')
+    if name == '' or room == '':
+        return redirect('/')
+    return render_template('chat.html', name=name, t=t, src=f"/static/img/{current_user.img}")
+
+
+@socketio.on('joined', namespace='/chat')
+def joined(message):
+    """Sent by clients when they enter a room.
+    A status message is broadcast to all people in the room."""
+    room = session.get('room')
+    join_room(room)
+
+
+@socketio.on('text', namespace='/chat')
+def text(message):
+    """Sent by a client when the user entered a new message.
+    The message is sent to all people in the room."""
+    room = session.get('room')
+    msg = message['msg']
+    db_sess = create_session()
+    user1 = db_sess.query(User).filter(User.id == session.get('id_user_1')).first()
+    user2 = db_sess.query(User).filter(User.id == session.get('id_user_2')).first()
+    new_msg = Msg(
+        id_first=user1.id,
+        id_second=user2.id,
+        message=msg
+    )
+    db_sess.add(new_msg)
+    db_sess.commit()
+    emit('message', {'msg': session.get('name') + ':' + msg}, room=room)
 
 
 class RegisterForm(FlaskForm):
@@ -178,8 +306,9 @@ class RegisterForm(FlaskForm):
     age = IntegerField("Возраст", validators=[DataRequired()])
     city = StringField("Город", validators=[DataRequired()])
     about = TextAreaField("Немного о себе", validators=[DataRequired()])
-    img = FileField("Аватар", validators=[DataRequired()])
+    img = FileField("Аватар")
     submit = SubmitField("Регистрация")
+
 
 @app.route('/test/<int:ID>/<mess>', methods=['POST', 'GET'])
 def test(ID, mess):
@@ -187,7 +316,6 @@ def test(ID, mess):
     con = sqlite3.connect("db/data.db")
     # Создание курсора
     cur = con.cursor()
-
 
     if request.method == 'GET':
         return f"""<!doctype html>  
@@ -272,11 +400,10 @@ def test(ID, mess):
                     </html>"""
 
     elif request.method == 'POST':
-        if not request.form.get('first') or not request.form.get('second') or not request.form.get('third') or\
+        if not request.form.get('first') or not request.form.get('second') or not request.form.get('third') or \
                 not request.form.get('fourth'):
             er = 'Не все поля заполнены'
-            return redirect(url_for(".test",ID=ID, mess=er))
-
+            return redirect(url_for(".test", ID=ID, mess=er))
 
         s_param = """INSERT INTO pr_test (id, v1, v2, v3, v4)
                                       VALUES (?, ?, ?, ?, ?);"""
@@ -290,7 +417,8 @@ def test(ID, mess):
         a = sovmest(ID)
 
         return redirect("/login")
-        #return "Форма отправлена"
+        # return "Форма отправлена"
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -329,7 +457,7 @@ def register():
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
-        return redirect(url_for(".test",ID=last_id+1,mess='Заполните все поля'))
+        return redirect(url_for(".test", ID=last_id + 1, mess='Заполните все поля'))
 
     return render_template("register.html", title="Регистрация", form=form)
 
@@ -359,6 +487,7 @@ def login():
         user = db_sess.query(User).filter(User.email == form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
+            src = current_user.img
             return redirect("/my_anketa")
     return render_template("login.html", title="Авторизация", form=form)
 
@@ -377,6 +506,8 @@ def not_found(error):
 
 if __name__ == "__main__":
     global_init("db/data.db")
-    app.run(port=8080, host="127.0.0.1")
+    socketio.run(app)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
 
 # user@com.ru 123
